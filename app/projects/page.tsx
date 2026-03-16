@@ -8,7 +8,7 @@ import { formatDate, getMonthName } from "@/lib/utils";
 import { MONTHS_TR, LANGUAGE_MAP, LANGUAGES, STATUS_MAP } from "@/lib/constants";
 import Link from "next/link";
 import ContextMenu, { ContextMenuItemType } from "@/components/ui/ContextMenu";
-
+export const dynamic = 'force-dynamic';
 interface Project {
   id: string;
   projectNo: string;
