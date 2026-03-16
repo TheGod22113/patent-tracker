@@ -7,8 +7,7 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  // Bu satır hayati: Build sırasında sayfaları üretmeye çalışma, çalışma anına bırak
-  output: 'standalone', 
+  // standalone satırını SİLDİK (klasik npm run start için)
 };
 
 export default nextConfig;
