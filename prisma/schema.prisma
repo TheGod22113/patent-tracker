@@ -1,0 +1,217 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Customer {
+  id        String            @id @default(cuid())
+  name      String
+  company   String
+  email     String?
+  phone     String?
+  address   String?
+  notes     String?
+  createdAt DateTime          @default(now())
+  projects  Project[]
+  invoices  Invoice[]
+  pricing   CustomerPricing[]
+}
+
+model CustomerPricing {
+  id                    String   @id @default(cuid())
+  customerId            String
+  customer              Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  sourceLanguage        String
+  targetLanguage        String
+  pricePerThousandChars Float
+  pricePerFigurePage    Float
+  createdAt             DateTime @default(now())
+
+  @@unique([customerId, sourceLanguage, targetLanguage])
+}
+
+model Staff {
+  id                    String    @id @default(cuid())
+  name                  String
+  role                  String    // "coordinator" | "translator" | "both"
+  email                 String?
+  phone                 String?
+  active                Boolean   @default(true)
+  createdAt             DateTime  @default(now())
+  projectsAsCoordinator Project[] @relation("coordinator")
+  projectsAsTranslator  Project[] @relation("translator")
+}
+
+model Project {
+  id               String                  @id @default(cuid())
+  projectNo        String                  @unique
+  year             Int
+  month            Int
+  customerId       String
+  customer         Customer                @relation(fields: [customerId], references: [id])
+  sourceLanguage   String
+  targetLanguage   String
+  createdAt        DateTime                @default(now())
+  deliveryDate     DateTime?
+  status           String                  @default("new")
+  // new | word_conversion | translation | review | completed | invoiced
+  coordinatorId    String?
+  coordinator      Staff?                  @relation("coordinator", fields: [coordinatorId], references: [id])
+  translatorId     String?
+  translator       Staff?                  @relation("translator", fields: [translatorId], references: [id])
+  sourceFiles      ProjectFile[]
+  outputs          ProjectOutput[]
+  invoiceItem      InvoiceItem?
+  notes            String?
+  statusHistory    ProjectStatusHistory[]
+  projectNotes     ProjectNote[]
+  tags             ProjectTag[]
+  timeEntries      TimeEntry[]
+  checklist        ChecklistItem[]
+}
+
+model ProjectFile {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  fileName  String
+  driveLink String?
+  filePath  String?
+  fileType  String   @default("pdf")
+  createdAt DateTime @default(now())
+}
+
+model ProjectOutput {
+  id         String   @id @default(cuid())
+  projectId  String
+  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  outputType String
+  // "translation" | "figures" | "sequence"
+  fileName   String?
+  driveLink  String?
+  filePath   String?
+  charCount  Int?
+  pageCount  Int?
+  unitPrice  Float?
+  totalPrice Float?
+  createdAt  DateTime @default(now())
+}
+
+model Pricing {
+  id                    String @id @default(cuid())
+  year                  Int
+  sourceLanguage        String
+  targetLanguage        String
+  pricePerThousandChars Float
+  pricePerFigurePage    Float
+
+  @@unique([year, sourceLanguage, targetLanguage])
+}
+
+model Invoice {
+  id          String       @id @default(cuid())
+  invoiceNo   String?      @unique
+  customerId  String
+  customer    Customer     @relation(fields: [customerId], references: [id])
+  year        Int
+  month       Int
+  totalAmount Float        @default(0)
+  status      String       @default("draft")
+  // draft | sent | paid
+  issuedAt    DateTime?
+  paidAt      DateTime?
+  notes       String?
+  createdAt   DateTime     @default(now())
+  items       InvoiceItem[]
+}
+
+model InvoiceItem {
+  id          String  @id @default(cuid())
+  invoiceId   String
+  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  projectId   String  @unique
+  project     Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  description String?
+  amount      Float
+}
+
+model ProjectStatusHistory {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  oldStatus String
+  newStatus String
+  changedAt DateTime @default(now())
+  changedBy String?
+}
+
+model ProjectTemplate {
+  id                    String   @id @default(cuid())
+  name                  String
+  sourceLanguage        String
+  targetLanguage        String
+  pricePerThousandChars Float
+  pricePerFigurePage    Float
+  createdAt             DateTime @default(now())
+}
+
+model ProjectNote {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  content   String
+  createdAt DateTime @default(now())
+  createdBy String?
+}
+
+// ── Yeni Modeller ────────────────────────────────────────────────────────────
+
+model MonthlyTarget {
+  id     String @id @default(cuid())
+  year   Int
+  month  Int
+  target Float  // hedef ciro (TRY)
+
+  @@unique([year, month])
+}
+
+model Tag {
+  id       String       @id @default(cuid())
+  name     String       @unique
+  color    String       @default("#7A4899")
+  projects ProjectTag[]
+}
+
+model ProjectTag {
+  projectId String
+  tagId     String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tag       Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([projectId, tagId])
+}
+
+model TimeEntry {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  description String?
+  minutes     Int      // dakika cinsinden süre
+  staffName   String?
+  date        DateTime @default(now())
+  createdAt   DateTime @default(now())
+}
+
+model ChecklistItem {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  text      String
+  completed Boolean  @default(false)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+}
