@@ -1,95 +1,79 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from '@prisma/client'
 
-const prisma = new PrismaClient();
+async function migrate() {
+  // 1. Google Drive'daki SQLite (Kaynak)
+  const sqlite = new PrismaClient({
+    datasources: { db: { url: "file:G:/Drive'ım/patent-tracker-db/patent.db" } }
+  })
 
-async function main() {
-  console.log("Seed verisi ekleniyor...");
-
-  // Personel
-  const halilK = await prisma.staff.upsert({
-    where: { id: "staff-halil-kosger" },
-    update: {},
-    create: {
-      id: "staff-halil-kosger",
-      name: "Halil Köşger",
-      role: "both",
-      email: "halil@eu-pa.com",
-    },
-  });
-
-  const meralT = await prisma.staff.upsert({
-    where: { id: "staff-meral-toy" },
-    update: {},
-    create: {
-      id: "staff-meral-toy",
-      name: "Meral TOY",
-      role: "coordinator",
-      email: "meral.toy@eu-pa.com",
-    },
-  });
-
-  const meralK = await prisma.staff.upsert({
-    where: { id: "staff-meral-kosger" },
-    update: {},
-    create: {
-      id: "staff-meral-kosger",
-      name: "Meral Köşger",
-      role: "translator",
-      email: "meral.kosger@eu-pa.com",
-    },
-  });
-
-  console.log("Personel eklendi:", halilK.name, meralT.name, meralK.name);
-
-  // Fiyat Listesi 2026
-  const pricingData = [
-    { source: "en", target: "tr", chars: 30, fig: 50 },
-    { source: "de", target: "tr", chars: 35, fig: 50 },
-    { source: "fr", target: "tr", chars: 35, fig: 50 },
-    { source: "ru", target: "tr", chars: 38, fig: 50 },
-    { source: "tr", target: "en", chars: 30, fig: 50 },
-    { source: "tr", target: "de", chars: 35, fig: 50 },
-  ];
-
-  for (const p of pricingData) {
-    await prisma.pricing.upsert({
-      where: {
-        year_sourceLanguage_targetLanguage: {
-          year: 2026,
-          sourceLanguage: p.source,
-          targetLanguage: p.target,
-        },
-      },
-      update: {},
-      create: {
-        year: 2026,
-        sourceLanguage: p.source,
-        targetLanguage: p.target,
-        pricePerThousandChars: p.chars,
-        pricePerFigurePage: p.fig,
-      },
-    });
+  // 2. Railway PostgreSQL (Hedef) 
+  // BURAYA DİKKAT: Alttaki tırnak içine Railway'den aldığın "External Connection URL" linkini yapıştır!
+// seed.ts içinde pg kısmını şu şekilde güncelle:
+const pg = new PrismaClient({
+  datasources: {
+    db: {
+      url: "postgresql://postgres:QtYllFMaUjMZaAQCNLmzWhWHtQuRChth@interchange.proxy.rlwy.net:51556/railway"
+    }
   }
+})
 
-  console.log("Fiyat listesi eklendi (2026)");
+  console.log('🚀 Veri göçü başlıyor...');
 
-  // Örnek Müşteri
-  const customer = await prisma.customer.upsert({
-    where: { id: "customer-abc-patent" },
-    update: {},
-    create: {
-      id: "customer-abc-patent",
-      name: "Ahmet Yılmaz",
-      company: "ABC Patent Danışmanlık Ltd.",
-      email: "info@abcpatent.com",
-      phone: "+90 212 000 0000",
-    },
-  });
+  try {
+    console.log('📦 Temel tablolar aktarılıyor...');
+    
+    const customers = await sqlite.customer.findMany();
+    for (const item of customers) await pg.customer.create({ data: item });
 
-  console.log("Örnek müşteri eklendi:", customer.company);
-  console.log("✅ Seed tamamlandı!");
+    const staff = await sqlite.staff.findMany();
+    for (const item of staff) await pg.staff.create({ data: item });
+
+    const tags = await sqlite.tag.findMany();
+    for (const item of tags) await pg.tag.create({ data: item });
+
+    const monthlyTargets = await sqlite.monthlyTarget.findMany();
+    for (const item of monthlyTargets) await pg.monthlyTarget.create({ data: item });
+
+    const pricing = await sqlite.pricing.findMany();
+    for (const item of pricing) await pg.pricing.create({ data: item });
+
+    console.log('📂 Projeler ve detaylar aktarılıyor...');
+    
+    const projects = await sqlite.project.findMany();
+    for (const item of projects) await pg.project.create({ data: item });
+
+    const projectFiles = await sqlite.projectFile.findMany();
+    for (const item of projectFiles) await pg.projectFile.create({ data: item });
+
+    const projectOutputs = await sqlite.projectOutput.findMany();
+    for (const item of projectOutputs) await pg.projectOutput.create({ data: item });
+
+    console.log('💰 Faturalar aktarılıyor...');
+    
+    const invoices = await sqlite.invoice.findMany();
+    for (const item of invoices) await pg.invoice.create({ data: item });
+
+    const invoiceItems = await sqlite.invoiceItem.findMany();
+    for (const item of invoiceItems) await pg.invoiceItem.create({ data: item });
+
+    console.log('📝 Notlar ve geçmiş verileri aktarılıyor...');
+    
+    const histories = await sqlite.projectStatusHistory.findMany();
+    for (const item of histories) await pg.projectStatusHistory.create({ data: item });
+
+    const timeEntries = await sqlite.timeEntry.findMany();
+    for (const item of timeEntries) await pg.timeEntry.create({ data: item });
+
+    const checklistItems = await sqlite.checklistItem.findMany();
+    for (const item of checklistItems) await pg.checklistItem.create({ data: item });
+
+    console.log('✅ Göç işlemi başarıyla tamamlandı!');
+  } catch (error) {
+    console.error('❌ Hata oluştu:', error);
+  } finally {
+    await sqlite.$disconnect();
+    await pg.$disconnect();
+  }
 }
 
-main()
-  .catch(console.error)
-  .finally(() => prisma.$disconnect());
+migrate();
