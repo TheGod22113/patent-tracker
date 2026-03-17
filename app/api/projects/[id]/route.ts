@@ -49,21 +49,25 @@ export async function PUT(
   try {
     const body = await req.json();
 
-    // Status geçmişini kaydet (status değişiyorsa)
+    // Status geçmişini kaydet (status değişiyorsa — tablo yoksa atla)
     if (body.status) {
-      const current = await prisma.project.findUnique({
-        where: { id: params.id },
-        select: { status: true },
-      });
-      if (current && current.status !== body.status) {
-        await prisma.projectStatusHistory.create({
-          data: {
-            projectId: params.id,
-            oldStatus: current.status,
-            newStatus: body.status,
-            changedBy: body.changedBy || "sistem",
-          },
+      try {
+        const current = await prisma.project.findUnique({
+          where: { id: params.id },
+          select: { status: true },
         });
+        if (current && current.status !== body.status) {
+          await prisma.projectStatusHistory.create({
+            data: {
+              projectId: params.id,
+              oldStatus: current.status,
+              newStatus: body.status,
+              changedBy: body.changedBy || "sistem",
+            },
+          });
+        }
+      } catch {
+        // ProjectStatusHistory tablosu henüz oluşturulmamış — atla
       }
     }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import AppLayout from "@/components/layout/AppLayout";
 import { StatusBadge } from "@/components/ui/Badge";
 import Modal from "@/components/ui/Modal";
@@ -122,11 +122,9 @@ function formatMinutes(min: number): string {
   return `${m}d`;
 }
 
-export default function ProjectDetailPage({
-  params,
-}: {
-  params: { id: string };
-}) {
+export default function ProjectDetailPage() {
+  const rawParams = useParams();
+  const params = { id: String(rawParams?.id ?? "") };
   const router = useRouter();
   const [project, setProject] = useState<Project | null>(null);
   const [staff, setStaff] = useState<Staff[]>([]);
