@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import AppLayout from "@/components/layout/AppLayout";
 import Modal from "@/components/ui/Modal";
@@ -70,7 +70,8 @@ const currentYear = new Date().getFullYear();
 const YEARS = [currentYear - 1, currentYear, currentYear + 1];
 
 export default function CustomerDetailPage() {
-  const { id } = useParams<{ id: string }>();
+  const pathname = usePathname();
+  const id = pathname?.split("/").filter(Boolean).pop() ?? "";
   const router = useRouter();
 
   const [customer, setCustomer] = useState<Customer | null>(null);
