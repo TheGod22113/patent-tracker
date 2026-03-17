@@ -53,10 +53,10 @@
 
   /* Page header */
   .page-header {
-    @apply flex items-center justify-between mb-8;
+    @apply flex items-center justify-between mb-6 gap-3 flex-wrap;
   }
   .page-title {
-    @apply text-2xl font-bold text-gray-900 tracking-tight;
+    @apply text-xl md:text-2xl font-bold text-gray-900 tracking-tight;
   }
   .page-subtitle {
     @apply text-sm text-gray-400 mt-1;

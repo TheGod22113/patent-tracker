@@ -271,7 +271,8 @@ export default function InvoicesPage() {
             </button>
           </div>
         ) : (
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[600px]">
             <thead>
               <tr className="text-xs text-gray-500 uppercase tracking-wide border-b border-gray-100">
                 <th className="text-left px-4 py-3">Fatura No</th>
@@ -335,6 +336,7 @@ export default function InvoicesPage() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 

@@ -12,6 +12,11 @@ interface NavItem {
   badge?: number;
 }
 
+interface SidebarProps {
+  open: boolean;
+  onClose: () => void;
+}
+
 const allNavItems: NavItem[] = [
   {
     href: "/dashboard",
@@ -120,7 +125,7 @@ const navGroups = [
   { label: "YÖNETİM", keys: ["/customers", "/staff", "/invoices", "/activity", "/settings"] },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ open, onClose }: SidebarProps) {
   const pathname = usePathname();
   const [overdueCount, setOverdueCount] = useState(0);
 
@@ -131,6 +136,12 @@ export default function Sidebar() {
       .catch(() => {});
   }, []);
 
+  // Rota değişince mobilde sidebar'ı kapat
+  useEffect(() => {
+    onClose();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
+
   const navItems = allNavItems.map((item) =>
     item.href === "/projects" && overdueCount > 0
       ? { ...item, badge: overdueCount }
@@ -138,92 +149,116 @@ export default function Sidebar() {
   );
 
   return (
-    <aside className="w-64 flex flex-col min-h-screen fixed left-0 top-0" style={{ background: "#1A0F2E" }}>
-      {/* Logo / Brand */}
-      <div className="px-5 py-5 border-b" style={{ borderColor: "#2D1F45" }}>
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden flex-shrink-0" style={{ background: "#2D1F45" }}>
-            <Image
-              src="/logo.png"
-              alt="Jagadamba"
-              width={40}
-              height={40}
-              className="object-contain"
-              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-            />
-          </div>
-          <div className="min-w-0">
-            <h1 className="text-sm font-bold tracking-widest text-white uppercase leading-none">Jagadamba</h1>
-            <p className="text-xs mt-1 truncate" style={{ color: "#9D7FB5" }}>Patent Tercüme Takip</p>
-          </div>
-        </div>
-      </div>
+    <>
+      {/* Mobil karartma overlay */}
+      {open && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={onClose}
+        />
+      )}
 
-      {/* Navigation */}
-      <nav className="flex-1 px-3 py-5 space-y-5 overflow-y-auto">
-        {navGroups.map((group) => (
-          <div key={group.label}>
-            <p className="px-3 mb-2 text-xs font-semibold tracking-widest" style={{ color: "#4A3360" }}>
-              {group.label}
-            </p>
-            <div className="space-y-0.5">
-              {navItems
-                .filter((item) => group.keys.includes(item.href))
-                .map((item) => {
-                  const isActive =
-                    item.href === "/dashboard"
-                      ? pathname === "/dashboard"
-                      : pathname.startsWith(item.href);
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                        isActive ? "text-white shadow-sm" : "hover:text-white"
-                      }`}
-                      style={
-                        isActive
-                          ? { background: "linear-gradient(135deg, #8B54A8 0%, #6B3A8A 100%)" }
-                          : { color: "#A080BE" }
-                      }
-                      onMouseEnter={(e) => {
-                        if (!isActive) {
-                          (e.currentTarget as HTMLElement).style.background = "#251838";
-                          (e.currentTarget as HTMLElement).style.color = "#E0C8F4";
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!isActive) {
-                          (e.currentTarget as HTMLElement).style.background = "transparent";
-                          (e.currentTarget as HTMLElement).style.color = "#A080BE";
-                        }
-                      }}
-                    >
-                      <span className={isActive ? "opacity-100" : "opacity-70"}>{item.icon}</span>
-                      <span className="flex-1">{item.label}</span>
-                      {item.badge && item.badge > 0 && (
-                        <span className="min-w-5 h-5 px-1 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
-                          {item.badge > 99 ? "99+" : item.badge}
-                        </span>
-                      )}
-                    </Link>
-                  );
-                })}
+      <aside
+        className={`w-64 flex flex-col min-h-screen fixed left-0 top-0 z-50 transition-transform duration-300 ease-in-out
+          ${open ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
+        style={{ background: "#1A0F2E" }}
+      >
+        {/* Logo / Brand */}
+        <div className="px-5 py-5 border-b flex items-center justify-between" style={{ borderColor: "#2D1F45" }}>
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden flex-shrink-0" style={{ background: "#2D1F45" }}>
+              <Image
+                src="/logo.png"
+                alt="Jagadamba"
+                width={40}
+                height={40}
+                className="object-contain"
+                onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+              />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-sm font-bold tracking-widest text-white uppercase leading-none">Jagadamba</h1>
+              <p className="text-xs mt-1 truncate" style={{ color: "#9D7FB5" }}>Patent Tercüme Takip</p>
             </div>
           </div>
-        ))}
-      </nav>
+          {/* Mobilde kapat butonu */}
+          <button
+            onClick={onClose}
+            className="lg:hidden flex-shrink-0 p-1 rounded-lg hover:bg-white/10 transition-colors"
+            style={{ color: "#9D7FB5" }}
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
 
-      {/* Footer */}
-      <div className="px-5 py-4 border-t" style={{ borderColor: "#2D1F45" }}>
-        <div className="flex items-center justify-between">
-          <span className="text-xs" style={{ color: "#4A3360" }}>v1.0.0</span>
-          <div className="flex items-center gap-1.5">
-            <div className="w-2 h-2 rounded-full bg-emerald-400" />
-            <span className="text-xs" style={{ color: "#4A3360" }}>Çevrimiçi</span>
+        {/* Navigation */}
+        <nav className="flex-1 px-3 py-5 space-y-5 overflow-y-auto">
+          {navGroups.map((group) => (
+            <div key={group.label}>
+              <p className="px-3 mb-2 text-xs font-semibold tracking-widest" style={{ color: "#4A3360" }}>
+                {group.label}
+              </p>
+              <div className="space-y-0.5">
+                {navItems
+                  .filter((item) => group.keys.includes(item.href))
+                  .map((item) => {
+                    const isActive =
+                      item.href === "/dashboard"
+                        ? pathname === "/dashboard"
+                        : pathname.startsWith(item.href);
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                          isActive ? "text-white shadow-sm" : "hover:text-white"
+                        }`}
+                        style={
+                          isActive
+                            ? { background: "linear-gradient(135deg, #8B54A8 0%, #6B3A8A 100%)" }
+                            : { color: "#A080BE" }
+                        }
+                        onMouseEnter={(e) => {
+                          if (!isActive) {
+                            (e.currentTarget as HTMLElement).style.background = "#251838";
+                            (e.currentTarget as HTMLElement).style.color = "#E0C8F4";
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isActive) {
+                            (e.currentTarget as HTMLElement).style.background = "transparent";
+                            (e.currentTarget as HTMLElement).style.color = "#A080BE";
+                          }
+                        }}
+                      >
+                        <span className={isActive ? "opacity-100" : "opacity-70"}>{item.icon}</span>
+                        <span className="flex-1">{item.label}</span>
+                        {item.badge && item.badge > 0 && (
+                          <span className="min-w-5 h-5 px-1 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                            {item.badge > 99 ? "99+" : item.badge}
+                          </span>
+                        )}
+                      </Link>
+                    );
+                  })}
+              </div>
+            </div>
+          ))}
+        </nav>
+
+        {/* Footer */}
+        <div className="px-5 py-4 border-t" style={{ borderColor: "#2D1F45" }}>
+          <div className="flex items-center justify-between">
+            <span className="text-xs" style={{ color: "#4A3360" }}>v1.0.0</span>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2 h-2 rounded-full bg-emerald-400" />
+              <span className="text-xs" style={{ color: "#4A3360" }}>Çevrimiçi</span>
+            </div>
           </div>
         </div>
-      </div>
-    </aside>
+      </aside>
+    </>
   );
 }

@@ -512,7 +512,8 @@ function ProjectsContent() {
             <Link href="/projects/new" className="btn-primary mt-4">+ Yeni Proje</Link>
           </div>
         ) : (
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[900px]">
             <thead>
               <tr className="table-header">
                 <th className="px-4 py-3 w-8">
@@ -520,14 +521,14 @@ function ProjectsContent() {
                     checked={selectedIds.size === displayProjects.length && displayProjects.length > 0}
                     onChange={toggleSelectAll} className="rounded accent-brand-600" />
                 </th>
-                <th className="text-left px-4 py-3">Proje No</th>
-                <SortTh label="Müşteri" sortKey="customer" current={sortKey} dir={sortDir} onSort={handleSort} />
-                <th className="text-left px-4 py-3">Dil Çifti</th>
-                <th className="text-left px-4 py-3">Durum</th>
-                <th className="text-left px-4 py-3">Personel</th>
-                <SortTh label="Teslim" sortKey="deliveryDate" current={sortKey} dir={sortDir} onSort={handleSort} />
-                <SortTh label="Eklendi" sortKey="createdAt" current={sortKey} dir={sortDir} onSort={handleSort} />
                 <SortTh label="Notlar" sortKey="notes" current={sortKey} dir={sortDir} onSort={handleSort} />
+                <SortTh label="Teslim Tarihi" sortKey="deliveryDate" current={sortKey} dir={sortDir} onSort={handleSort} />
+                <th className="text-left px-4 py-3">Durum</th>
+                <th className="text-left px-4 py-3">Dil Çifti</th>
+                <SortTh label="Müşteri" sortKey="customer" current={sortKey} dir={sortDir} onSort={handleSort} />
+                <th className="text-left px-4 py-3">Personel</th>
+                <SortTh label="Eklenme Tarihi" sortKey="createdAt" current={sortKey} dir={sortDir} onSort={handleSort} />
+                <th className="text-left px-4 py-3">Proje No</th>
                 <th className="text-right px-4 py-3">Tutar</th>
                 <th className="px-4 py-3 w-12"></th>
               </tr>
@@ -550,46 +551,40 @@ function ProjectsContent() {
                         className="rounded accent-brand-600" />
                     </td>
 
-                    <td className="px-4 py-3">
-                      <p className="font-mono text-xs font-bold text-gray-900">{p.projectNo}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">{getMonthName(p.month)} {p.year}</p>
-                      {p.tags?.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {p.tags.slice(0, 3).map(({ tag }) => (
-                            <span key={tag.id}
-                              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-medium"
-                              style={{ background: tag.color + "20", color: tag.color, border: `1px solid ${tag.color}40` }}>
-                              <span className="w-1.5 h-1.5 rounded-full" style={{ background: tag.color }} />
-                              {tag.name}
-                            </span>
-                          ))}
-                          {p.tags.length > 3 && (
-                            <span className="text-xs text-gray-400">+{p.tags.length - 3}</span>
-                          )}
-                        </div>
-                      )}
+                    {/* Notlar */}
+                    <td className="px-4 py-3 max-w-40">
+                      {p.notes ? (
+                        <p className="text-xs text-gray-500 truncate" title={p.notes}>{p.notes}</p>
+                      ) : <span className="text-gray-300 text-xs">—</span>}
                     </td>
 
+                    {/* Teslim Tarihi */}
                     <td className="px-4 py-3">
-                      <p className="font-medium text-gray-800 text-xs">{p.customer.company}</p>
-                      <p className="text-xs text-gray-400">{p.customer.name}</p>
+                      {p.deliveryDate ? (() => {
+                        const daysLeft = Math.ceil(
+                          (new Date(p.deliveryDate).setHours(0,0,0,0) - new Date().setHours(0,0,0,0)) / 86400000
+                        );
+                        const isDone = ["completed", "invoiced"].includes(p.status);
+                        return (
+                          <div>
+                            <span className="text-xs font-medium text-gray-700">{formatDate(p.deliveryDate)}</span>
+                            {!isDone && (
+                              <p className={`text-xs mt-0.5 font-semibold ${
+                                daysLeft < 0 ? "text-red-600" :
+                                daysLeft === 0 ? "text-red-500" :
+                                daysLeft <= 2 ? "text-orange-600" :
+                                daysLeft <= 5 ? "text-yellow-600" : "text-emerald-600"}`}>
+                                {daysLeft < 0 ? `${Math.abs(daysLeft)} gün geçti` :
+                                 daysLeft === 0 ? "Bugün!" :
+                                 daysLeft === 1 ? "Yarın" : `${daysLeft} gün kaldı`}
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })() : <span className="text-gray-300 text-xs">—</span>}
                     </td>
 
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1 text-xs">
-                        <span className="bg-white/70 border border-gray-200 px-1.5 py-0.5 rounded">
-                          {LANGUAGE_MAP[p.sourceLanguage] ?? p.sourceLanguage}
-                        </span>
-                        <svg className="w-3 h-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                        <span className="bg-white/70 border border-gray-200 px-1.5 py-0.5 rounded">
-                          {LANGUAGE_MAP[p.targetLanguage] ?? p.targetLanguage}
-                        </span>
-                      </div>
-                    </td>
-
-                    {/* Inline status change */}
+                    {/* Durum */}
                     <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                       <div className="relative" ref={statusDropdown === p.id ? statusDropdownRef : null}>
                         <button
@@ -616,6 +611,28 @@ function ProjectsContent() {
                       </div>
                     </td>
 
+                    {/* Dil Çifti */}
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1 text-xs">
+                        <span className="bg-white/70 border border-gray-200 px-1.5 py-0.5 rounded">
+                          {LANGUAGE_MAP[p.sourceLanguage] ?? p.sourceLanguage}
+                        </span>
+                        <svg className="w-3 h-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                        <span className="bg-white/70 border border-gray-200 px-1.5 py-0.5 rounded">
+                          {LANGUAGE_MAP[p.targetLanguage] ?? p.targetLanguage}
+                        </span>
+                      </div>
+                    </td>
+
+                    {/* Müşteri */}
+                    <td className="px-4 py-3">
+                      <p className="font-medium text-gray-800 text-xs">{p.customer.company}</p>
+                      <p className="text-xs text-gray-400">{p.customer.name}</p>
+                    </td>
+
+                    {/* Personel */}
                     <td className="px-4 py-3">
                       <div className="text-xs text-gray-600 space-y-0.5">
                         {p.translator && <p><span className="text-gray-400">T:</span> {p.translator.name}</p>}
@@ -624,41 +641,33 @@ function ProjectsContent() {
                       </div>
                     </td>
 
-                    <td className="px-4 py-3">
-                      {p.deliveryDate ? (() => {
-                        const daysLeft = Math.ceil(
-                          (new Date(p.deliveryDate).setHours(0,0,0,0) - new Date().setHours(0,0,0,0)) / 86400000
-                        );
-                        const isDone = ["completed", "invoiced"].includes(p.status);
-                        return (
-                          <div>
-                            <span className="text-xs font-medium text-gray-700">{formatDate(p.deliveryDate)}</span>
-                            {!isDone && (
-                              <p className={`text-xs mt-0.5 font-semibold ${
-                                daysLeft < 0 ? "text-red-600" :
-                                daysLeft === 0 ? "text-red-500" :
-                                daysLeft <= 2 ? "text-orange-600" :
-                                daysLeft <= 5 ? "text-yellow-600" : "text-emerald-600"}`}>
-                                {daysLeft < 0 ? `${Math.abs(daysLeft)} gün geçti` :
-                                 daysLeft === 0 ? "Bugün!" :
-                                 daysLeft === 1 ? "Yarın" : `${daysLeft} gün kaldı`}
-                              </p>
-                            )}
-                          </div>
-                        );
-                      })() : <span className="text-gray-300 text-xs">—</span>}
-                    </td>
-
+                    {/* Eklenme Tarihi */}
                     <td className="px-4 py-3">
                       <span className="text-xs text-gray-400">{formatDate(p.createdAt)}</span>
                     </td>
 
-                    <td className="px-4 py-3 max-w-32">
-                      {p.notes ? (
-                        <p className="text-xs text-gray-500 truncate" title={p.notes}>{p.notes}</p>
-                      ) : <span className="text-gray-300 text-xs">—</span>}
+                    {/* Proje No */}
+                    <td className="px-4 py-3">
+                      <p className="font-mono text-xs font-bold text-gray-900">{p.projectNo}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">{getMonthName(p.month)} {p.year}</p>
+                      {p.tags?.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {p.tags.slice(0, 3).map(({ tag }) => (
+                            <span key={tag.id}
+                              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-medium"
+                              style={{ background: tag.color + "20", color: tag.color, border: `1px solid ${tag.color}40` }}>
+                              <span className="w-1.5 h-1.5 rounded-full" style={{ background: tag.color }} />
+                              {tag.name}
+                            </span>
+                          ))}
+                          {p.tags.length > 3 && (
+                            <span className="text-xs text-gray-400">+{p.tags.length - 3}</span>
+                          )}
+                        </div>
+                      )}
                     </td>
 
+                    {/* Tutar */}
                     <td className="px-4 py-3 text-right">
                       <span className={`text-xs font-semibold ${amount > 0 ? "text-gray-900" : "text-gray-300"}`}>
                         {amount > 0 ? amount.toLocaleString("tr-TR", { style: "currency", currency: "TRY" }) : "—"}
@@ -678,6 +687,7 @@ function ProjectsContent() {
               })}
             </tbody>
           </table>
+          </div>
         )}
       </div>
       {/* Sağ Tık Context Menu */}

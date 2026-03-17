@@ -144,8 +144,8 @@ export default function NewProjectPage() {
       setForm((prev) => ({
         ...prev,
         notes: prev.notes
-          ? `${prev.notes}\n📁 Klasör: ${dirHandle.name}`
-          : `📁 Klasör: ${dirHandle.name}`,
+          ? `${prev.notes}\n${dirHandle.name}`
+          : dirHandle.name,
       }));
       setScanning(true);
       setScanModal(true);
@@ -303,7 +303,7 @@ export default function NewProjectPage() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            content: `📁 Klasör: ${folderName}`,
+            content: folderName,
             createdBy: "sistem",
           }),
         });

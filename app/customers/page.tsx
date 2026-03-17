@@ -207,7 +207,8 @@ export default function CustomersPage() {
             </button>
           </div>
         ) : (
-          <table className="w-full">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[640px]">
             <thead>
               <tr className="text-xs text-gray-500 uppercase tracking-wide border-b border-gray-100">
                 <th className="text-left px-4 py-3">Ad / Firma</th>
@@ -281,6 +282,7 @@ export default function CustomersPage() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 
