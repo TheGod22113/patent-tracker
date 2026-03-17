@@ -50,6 +50,7 @@ export async function POST(req: NextRequest) {
       phone: body.phone || null,
       address: body.address || null,
       notes: body.notes || null,
+      slaDeliveryDays: body.slaDeliveryDays ?? null,
     },
   });
   return NextResponse.json(customer, { status: 201 });

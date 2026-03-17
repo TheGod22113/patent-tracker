@@ -42,6 +42,7 @@ export async function PUT(
       phone: body.phone || null,
       address: body.address || null,
       notes: body.notes || null,
+      slaDeliveryDays: body.slaDeliveryDays !== undefined ? body.slaDeliveryDays : undefined,
     },
   });
   return NextResponse.json(customer);

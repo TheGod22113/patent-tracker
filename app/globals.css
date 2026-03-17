@@ -75,7 +75,7 @@
 
   /* Filter bar */
   .filter-bar {
-    @apply card p-4 mb-6;
+    @apply card p-3 md:p-4 mb-4 md:mb-6;
   }
 
   /* Section header inside card */

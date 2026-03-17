@@ -23,6 +23,7 @@ interface Customer {
   phone: string | null;
   address: string | null;
   notes: string | null;
+  slaDeliveryDays: number | null;
   createdAt: string;
   _count: { projects: number };
   pricing: CustomerPricing[];
@@ -35,6 +36,7 @@ const emptyForm = {
   phone: "",
   address: "",
   notes: "",
+  slaDeliveryDays: "",
 };
 
 export default function CustomersPage() {
@@ -98,6 +100,7 @@ export default function CustomersPage() {
       phone: c.phone ?? "",
       address: c.address ?? "",
       notes: c.notes ?? "",
+      slaDeliveryDays: c.slaDeliveryDays?.toString() ?? "",
     });
     setModal(true);
   };
@@ -112,7 +115,10 @@ export default function CustomersPage() {
     await fetch(url, {
       method,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
+      body: JSON.stringify({
+        ...form,
+        slaDeliveryDays: form.slaDeliveryDays ? parseInt(form.slaDeliveryDays) : null,
+      }),
     });
     setSaving(false);
     setModal(false);
@@ -214,6 +220,7 @@ export default function CustomersPage() {
                 <th className="text-left px-4 py-3">Ad / Firma</th>
                 <th className="text-left px-4 py-3">İletişim</th>
                 <th className="text-left px-4 py-3">Fiyatlar</th>
+                <th className="text-left px-4 py-3">SLA</th>
                 <th className="text-left px-4 py-3">Projeler</th>
                 <th className="text-left px-4 py-3">Kayıt</th>
                 <th className="px-4 py-3"></th>
@@ -249,6 +256,15 @@ export default function CustomersPage() {
                       >
                         Fiyat ekle
                       </button>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    {c.slaDeliveryDays ? (
+                      <span className="badge bg-blue-50 text-blue-700">
+                        {c.slaDeliveryDays} gün
+                      </span>
+                    ) : (
+                      <span className="text-xs text-gray-300">—</span>
                     )}
                   </td>
                   <td className="px-4 py-3">
@@ -342,6 +358,20 @@ export default function CustomersPage() {
               value={form.address}
               onChange={(e) => setForm({ ...form, address: e.target.value })}
             />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2 md:col-span-1">
+              <label className="label">SLA — Teslim Süresi (iş günü)</label>
+              <input
+                type="number"
+                min="1"
+                className="input"
+                value={form.slaDeliveryDays}
+                onChange={(e) => setForm({ ...form, slaDeliveryDays: e.target.value })}
+                placeholder="Örn: 10"
+              />
+              <p className="text-xs text-gray-400 mt-1">Boş bırakılırsa SLA takibi yapılmaz</p>
+            </div>
           </div>
           <div>
             <label className="label">Notlar</label>

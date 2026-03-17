@@ -397,8 +397,8 @@ function ProjectsContent() {
 
       {/* Filtreler */}
       <div className="filter-bar mb-4">
-        <div className="flex items-end gap-3 flex-wrap">
-          <div className="flex-1 min-w-52">
+        <div className="flex items-end gap-2 md:gap-3 flex-wrap">
+          <div className="flex-1 min-w-0 md:min-w-52">
             <label className="label">Ara</label>
             <div className="relative">
               <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -408,22 +408,22 @@ function ProjectsContent() {
                 onChange={(e) => setSearch(e.target.value)} className="input pl-9" />
             </div>
           </div>
-          <div>
+          <div className="w-20 md:w-24">
             <label className="label">Yıl</label>
-            <select value={year} onChange={(e) => setYear(parseInt(e.target.value))} className="input w-24">
+            <select value={year} onChange={(e) => setYear(parseInt(e.target.value))} className="input w-full">
               {[2024, 2025, 2026, 2027].map((y) => (<option key={y} value={y}>{y}</option>))}
             </select>
           </div>
-          <div>
+          <div className="w-28 md:w-32">
             <label className="label">Ay</label>
-            <select value={month} onChange={(e) => setMonth(e.target.value ? parseInt(e.target.value) : "")} className="input w-32">
+            <select value={month} onChange={(e) => setMonth(e.target.value ? parseInt(e.target.value) : "")} className="input w-full">
               <option value="">Tüm Aylar</option>
               {MONTHS_TR.map((m, i) => (<option key={i + 1} value={i + 1}>{m}</option>))}
             </select>
           </div>
-          <div>
+          <div className="w-36 md:w-40">
             <label className="label">Durum</label>
-            <select value={status} onChange={(e) => setStatus(e.target.value)} className="input w-40">
+            <select value={status} onChange={(e) => setStatus(e.target.value)} className="input w-full">
               <option value="">Tüm Durumlar</option>
               {Object.entries(STATUS_MAP).map(([k, v]) => (<option key={k} value={k}>{v.label}</option>))}
             </select>
@@ -512,7 +512,49 @@ function ProjectsContent() {
             <Link href="/projects/new" className="btn-primary mt-4">+ Yeni Proje</Link>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          {/* Mobil kart görünümü */}
+          <div className="md:hidden divide-y divide-gray-50">
+            {displayProjects.map((p) => {
+              const amount = p.outputs.reduce((s: number, o: {totalPrice: number | null}) => s + (o.totalPrice ?? 0), 0);
+              return (
+                <div
+                  key={p.id}
+                  className="p-4 hover:bg-gray-50 cursor-pointer active:bg-gray-100 transition-colors"
+                  onClick={() => router.push(`/projects/${p.id}`)}
+                  onContextMenu={(e) => { e.preventDefault(); setContextMenu({ x: e.clientX, y: e.clientY, project: p }); }}
+                >
+                  <div className="flex items-start justify-between gap-2 mb-1.5">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-mono text-xs font-bold text-gray-900">{p.projectNo}</span>
+                      <StatusBadge status={p.status} />
+                    </div>
+                    {amount > 0 && (
+                      <span className="text-xs font-semibold text-gray-700 flex-shrink-0">
+                        {amount.toLocaleString("tr-TR", { style: "currency", currency: "TRY" })}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm font-medium text-gray-800">{p.customer.company}</p>
+                  {p.notes && <p className="text-xs text-gray-500 truncate mt-0.5">{p.notes}</p>}
+                  <div className="flex items-center gap-3 flex-wrap mt-1.5">
+                    {p.deliveryDate && (() => {
+                      const daysLeft = Math.ceil((new Date(p.deliveryDate).setHours(0,0,0,0) - new Date().setHours(0,0,0,0)) / 86400000);
+                      const isDone = ["completed", "invoiced"].includes(p.status);
+                      return (
+                        <span className={`text-xs font-medium ${!isDone && daysLeft < 0 ? "text-red-600" : !isDone && daysLeft <= 2 ? "text-orange-600" : "text-gray-500"}`}>
+                          📅 {formatDate(p.deliveryDate)}{!isDone && daysLeft < 0 ? ` (${Math.abs(daysLeft)}g geçti)` : !isDone && daysLeft <= 5 ? ` (${daysLeft}g kaldı)` : ""}
+                        </span>
+                      );
+                    })()}
+                    {p.translator && <span className="text-xs text-gray-400">T: {p.translator.name}</span>}
+                    {p.coordinator && <span className="text-xs text-gray-400">K: {p.coordinator.name}</span>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div className="overflow-x-auto hidden md:block">
           <table className="w-full text-sm min-w-[900px]">
             <thead>
               <tr className="table-header">
@@ -688,6 +730,7 @@ function ProjectsContent() {
             </tbody>
           </table>
           </div>
+          </>
         )}
       </div>
       {/* Sağ Tık Context Menu */}

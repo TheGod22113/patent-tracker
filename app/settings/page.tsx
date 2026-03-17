@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import AppLayout from "@/components/layout/AppLayout";
 import Modal from "@/components/ui/Modal";
 import { LANGUAGE_MAP, LANGUAGES } from "@/lib/constants";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatDate } from "@/lib/utils";
+import { useAuth } from "@/components/AuthProvider";
 
 interface Staff {
   id: string;
@@ -40,6 +41,22 @@ interface Tag {
   _count: { projects: number };
 }
 
+interface User {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  active: boolean;
+  createdAt: string;
+}
+
+const ROLE_OPTIONS = [
+  { value: "admin", label: "Yönetici" },
+  { value: "coordinator", label: "Koordinatör" },
+  { value: "translator", label: "Tercüman" },
+  { value: "user", label: "Kullanıcı" },
+];
+
 const TAG_COLORS = [
   "#EF4444", "#F97316", "#EAB308", "#22C55E",
   "#06B6D4", "#3B82F6", "#8B5CF6", "#EC4899",
@@ -48,10 +65,20 @@ const TAG_COLORS = [
 
 export default function SettingsPage() {
   const now = new Date();
+  const { user: currentUser } = useAuth();
+  const isAdmin = currentUser?.role === "admin";
+
   const [staff, setStaff] = useState<Staff[]>([]);
   const [pricing, setPricing] = useState<Pricing[]>([]);
   const [pricingYear, setPricingYear] = useState(now.getFullYear());
   const [downloadingBackup, setDownloadingBackup] = useState(false);
+
+  // Kullanıcı yönetimi
+  const [users, setUsers] = useState<User[]>([]);
+  const [userModal, setUserModal] = useState(false);
+  const [editUser, setEditUser] = useState<User | null>(null);
+  const [userForm, setUserForm] = useState({ name: "", email: "", password: "", role: "user" });
+  const [savingUser, setSavingUser] = useState(false);
 
   const [staffModal, setStaffModal] = useState(false);
   const [editStaff, setEditStaff] = useState<Staff | null>(null);
@@ -112,6 +139,71 @@ export default function SettingsPage() {
   const loadTags = () =>
     fetch("/api/tags").then((r) => r.json()).then((d) => setTags(Array.isArray(d) ? d : [])).catch(() => setTags([]));
 
+  const loadUsers = () => {
+    if (!isAdmin) return;
+    fetch("/api/users").then((r) => r.json()).then((d) => setUsers(Array.isArray(d) ? d : [])).catch(() => setUsers([]));
+  };
+
+  const openNewUser = () => {
+    setEditUser(null);
+    setUserForm({ name: "", email: "", password: "", role: "user" });
+    setUserModal(true);
+  };
+
+  const openEditUser = (u: User) => {
+    setEditUser(u);
+    setUserForm({ name: u.name, email: u.email, password: "", role: u.role });
+    setUserModal(true);
+  };
+
+  const saveUser = async () => {
+    if (!userForm.name || !userForm.email) return alert("Ad ve e-posta zorunludur.");
+    if (!editUser && !userForm.password) return alert("Yeni kullanıcı için şifre zorunludur.");
+    setSavingUser(true);
+    const url = editUser ? `/api/users/${editUser.id}` : "/api/users";
+    const method = editUser ? "PUT" : "POST";
+    const body: Record<string, string> = {
+      name: userForm.name,
+      email: userForm.email,
+      role: userForm.role,
+    };
+    if (userForm.password) body.password = userForm.password;
+    const res = await fetch(url, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const data = await res.json();
+      alert(data.error || "Hata oluştu");
+    }
+    setSavingUser(false);
+    setUserModal(false);
+    loadUsers();
+  };
+
+  const toggleUserActive = async (u: User) => {
+    const action = u.active ? "pasif yapmak" : "aktif yapmak";
+    if (!confirm(`"${u.name}" kullanıcısını ${action} istiyor musunuz?`)) return;
+    await fetch(`/api/users/${u.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ active: !u.active }),
+    });
+    loadUsers();
+  };
+
+  const deleteUser = async (u: User) => {
+    if (!confirm(`"${u.name}" kullanıcısını silmek istiyor musunuz? Bu işlem geri alınamaz.`)) return;
+    const res = await fetch(`/api/users/${u.id}`, { method: "DELETE" });
+    if (!res.ok) {
+      const data = await res.json();
+      alert(data.error || "Silinemedi");
+      return;
+    }
+    loadUsers();
+  };
+
   const saveTemplate = async () => {
     if (!templateForm.name) return alert("Şablon adı zorunludur.");
     setSavingTemplate(true);
@@ -161,6 +253,7 @@ export default function SettingsPage() {
     loadStaff();
     loadTemplates();
     loadTags();
+    loadUsers();
   }, []);
 
   useEffect(() => {
@@ -560,6 +653,82 @@ export default function SettingsPage() {
         )}
       </div>
 
+      {/* Kullanıcı Yönetimi (Sadece Admin) */}
+      {isAdmin && (
+        <div className="card p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="font-semibold text-gray-900 text-lg">Kullanıcı Yönetimi</h2>
+              <p className="text-xs text-gray-400 mt-0.5">Sisteme giriş yapabilecek kullanıcıları yönetin</p>
+            </div>
+            <button onClick={openNewUser} className="btn-primary btn-sm">
+              + Kullanıcı Ekle
+            </button>
+          </div>
+          {users.length === 0 ? (
+            <p className="text-gray-400 text-sm text-center py-6">Henüz kullanıcı yok</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm min-w-[600px]">
+                <thead>
+                  <tr className="text-xs text-gray-500 uppercase border-b border-gray-100">
+                    <th className="text-left py-2">Ad</th>
+                    <th className="text-left py-2">E-posta</th>
+                    <th className="text-left py-2">Rol</th>
+                    <th className="text-left py-2">Durum</th>
+                    <th className="text-left py-2">Kayıt</th>
+                    <th className="py-2"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {users.map((u) => (
+                    <tr key={u.id} className={!u.active ? "opacity-50" : ""}>
+                      <td className="py-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-full bg-brand-100 flex items-center justify-center text-xs font-bold text-brand-700">
+                            {u.name.charAt(0).toUpperCase()}
+                          </div>
+                          <span className="font-medium text-gray-900">{u.name}</span>
+                        </div>
+                      </td>
+                      <td className="py-2 text-gray-600">{u.email}</td>
+                      <td className="py-2">
+                        <span className={`badge ${u.role === "admin" ? "bg-purple-100 text-purple-700" : u.role === "coordinator" ? "bg-blue-100 text-blue-700" : u.role === "translator" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-700"}`}>
+                          {ROLE_OPTIONS.find((r) => r.value === u.role)?.label || u.role}
+                        </span>
+                      </td>
+                      <td className="py-2">
+                        {u.active ? (
+                          <span className="badge bg-emerald-100 text-emerald-700">Aktif</span>
+                        ) : (
+                          <span className="badge bg-red-100 text-red-700">Pasif</span>
+                        )}
+                      </td>
+                      <td className="py-2 text-gray-500 text-xs">{formatDate(u.createdAt)}</td>
+                      <td className="py-2">
+                        <div className="flex gap-2 justify-end">
+                          <button onClick={() => openEditUser(u)} className="btn-secondary btn-sm">
+                            Düzenle
+                          </button>
+                          <button onClick={() => toggleUserActive(u)} className="text-xs text-amber-600 hover:text-amber-800 px-2 py-1">
+                            {u.active ? "Pasif Yap" : "Aktif Yap"}
+                          </button>
+                          {u.id !== currentUser?.id && (
+                            <button onClick={() => deleteUser(u)} className="text-xs text-red-400 hover:text-red-600 px-2 py-1">
+                              Sil
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Veri Yedekleme */}
       <div className="card p-6 mb-6">
         <div className="mb-4">
@@ -670,6 +839,66 @@ export default function SettingsPage() {
           </div>
         </div>
       </Modal>
+
+      {/* User Modal */}
+      {isAdmin && (
+        <Modal open={userModal} onClose={() => setUserModal(false)} title={editUser ? "Kullanıcı Düzenle" : "Yeni Kullanıcı"}>
+          <div className="space-y-4">
+            <div>
+              <label className="label">Ad Soyad *</label>
+              <input
+                className="input"
+                value={userForm.name}
+                onChange={(e) => setUserForm({ ...userForm, name: e.target.value })}
+                placeholder="Ahmet Yılmaz"
+              />
+            </div>
+            <div>
+              <label className="label">E-posta *</label>
+              <input
+                type="email"
+                className="input"
+                value={userForm.email}
+                onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
+                placeholder="ahmet@jagadamba.com"
+              />
+            </div>
+            <div>
+              <label className="label">
+                Şifre {editUser ? "(boş bırakılırsa değişmez)" : "*"}
+              </label>
+              <input
+                type="password"
+                className="input"
+                value={userForm.password}
+                onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
+                placeholder={editUser ? "Değiştirmek için yeni şifre girin" : "Şifre belirleyin"}
+              />
+            </div>
+            <div>
+              <label className="label">Rol</label>
+              <select
+                value={userForm.role}
+                onChange={(e) => setUserForm({ ...userForm, role: e.target.value })}
+                className="input"
+              >
+                {ROLE_OPTIONS.map((r) => (
+                  <option key={r.value} value={r.value}>{r.label}</option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-400 mt-1">
+                Yönetici: tam erişim. Koordinatör/Tercüman/Kullanıcı: temel erişim.
+              </p>
+            </div>
+            <div className="flex justify-end gap-3 pt-2">
+              <button onClick={() => setUserModal(false)} className="btn-secondary">İptal</button>
+              <button onClick={saveUser} disabled={savingUser} className="btn-primary">
+                {savingUser ? "Kaydediliyor..." : "Kaydet"}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
 
       {/* Pricing Modal */}
       <Modal

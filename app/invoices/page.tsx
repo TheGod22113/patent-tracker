@@ -202,6 +202,17 @@ export default function InvoicesPage() {
     window.open(`/api/invoices/${invoiceId}/pdf`, "_blank");
   };
 
+  const deleteInvoice = async (inv: Invoice) => {
+    const label = inv.invoiceNo || `${getMonthName(inv.month)} ${inv.year} — ${inv.customer.company}`;
+    if (!confirm(`"${label}" faturasını silmek istiyor musunuz?\n\nBağlı projeler "tamamlandı" durumuna geri alınacaktır.`)) return;
+    const res = await fetch(`/api/invoices/${inv.id}`, { method: "DELETE" });
+    if (res.ok) {
+      loadInvoices();
+    } else {
+      alert("Fatura silinemedi.");
+    }
+  };
+
   const totalInvoiced = invoices.reduce((s, i) => s + i.totalAmount, 0);
   const totalPaid = invoices
     .filter((i) => i.status === "paid")
@@ -311,26 +322,37 @@ export default function InvoicesPage() {
                     {inv.issuedAt ? formatDate(inv.issuedAt) : formatDate(inv.createdAt)}
                   </td>
                   <td className="px-4 py-3">
-                    <button
-                      onClick={async () => {
-                        setSelectedInvoice(inv);
-                        setDetailModal(true);
-                        // Her proje için handle yükle
-                        const map = new Map<string, FileSystemDirectoryHandle>();
-                        await Promise.all(
-                          inv.items.map(async (item) => {
-                            try {
-                              const h = await getDirHandle(`project-${item.project.id}`);
-                              if (h) map.set(item.project.id, h);
-                            } catch { /* ignore */ }
-                          })
-                        );
-                        setProjectHandles(map);
-                      }}
-                      className="btn-secondary btn-sm"
-                    >
-                      Detay
-                    </button>
+                    <div className="flex items-center gap-2 justify-end">
+                      <button
+                        onClick={async () => {
+                          setSelectedInvoice(inv);
+                          setDetailModal(true);
+                          // Her proje için handle yükle
+                          const map = new Map<string, FileSystemDirectoryHandle>();
+                          await Promise.all(
+                            inv.items.map(async (item) => {
+                              try {
+                                const h = await getDirHandle(`project-${item.project.id}`);
+                                if (h) map.set(item.project.id, h);
+                              } catch { /* ignore */ }
+                            })
+                          );
+                          setProjectHandles(map);
+                        }}
+                        className="btn-secondary btn-sm"
+                      >
+                        Detay
+                      </button>
+                      <button
+                        onClick={() => deleteInvoice(inv)}
+                        className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Faturayı sil"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

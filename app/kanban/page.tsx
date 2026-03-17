@@ -290,22 +290,24 @@ export default function KanbanPage() {
         </div>
       ) : (
         /* Board — full-width horizontal scroll */
-        <div
-          className="flex gap-3 overflow-x-auto pb-4"
-          style={{ minHeight: "calc(100vh - 160px)" }}
-          onDragEnd={handleDragEnd}
-        >
-          {COLUMNS.map((col) => (
-            <KanbanColumn
-              key={col.key}
-              column={col}
-              projects={getColumnProjects(col.key)}
-              onDragStart={handleDragStart}
-              onDragOver={handleDragOver}
-              onDrop={handleDrop}
-              isDragOver={dragOverColumn === col.key}
-            />
-          ))}
+        <div className="overflow-x-auto pb-2">
+          <div
+            className="flex gap-3 min-w-max pb-4"
+            style={{ minHeight: "calc(100vh - 160px)" }}
+            onDragEnd={handleDragEnd}
+          >
+            {COLUMNS.map((col) => (
+              <KanbanColumn
+                key={col.key}
+                column={col}
+                projects={getColumnProjects(col.key)}
+                onDragStart={handleDragStart}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+                isDragOver={dragOverColumn === col.key}
+              />
+            ))}
+          </div>
         </div>
       )}
     </AppLayout>

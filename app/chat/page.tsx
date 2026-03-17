@@ -86,10 +86,25 @@ export default function ChatPage() {
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastMsgIdRef = useRef<string | null>(null);
 
-  // Adı localStorage'dan yükle
+  // Adı session'dan veya localStorage'dan yükle
   useEffect(() => {
-    const saved = localStorage.getItem("chat-name");
-    if (saved) setMyName(saved);
+    // Önce auth session'dan dene
+    fetch("/api/auth/me")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.user?.name) {
+          setMyName(d.user.name);
+          localStorage.setItem("chat-name", d.user.name);
+        } else {
+          const saved = localStorage.getItem("chat-name");
+          if (saved) setMyName(saved);
+        }
+      })
+      .catch(() => {
+        const saved = localStorage.getItem("chat-name");
+        if (saved) setMyName(saved);
+      });
+
     fetch("/api/staff")
       .then((r) => r.json())
       .then((d) => setStaff(Array.isArray(d) ? d.filter((s: StaffMember) => s.active) : []))

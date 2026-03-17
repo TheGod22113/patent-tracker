@@ -14,11 +14,12 @@ model Customer {
   email     String?
   phone     String?
   address   String?
-  notes     String?
-  createdAt DateTime          @default(now())
-  projects  Project[]
-  invoices  Invoice[]
-  pricing   CustomerPricing[]
+  notes           String?
+  slaDeliveryDays Int?              // SLA: müşteriye taahhüt edilen teslim süresi (iş günü)
+  createdAt       DateTime          @default(now())
+  projects        Project[]
+  invoices        Invoice[]
+  pricing         CustomerPricing[]
 }
 
 model CustomerPricing {
@@ -222,4 +223,14 @@ model Message {
   senderName String
   channel    String   @default("genel") // "genel" veya "Ad1|Ad2" (DM)
   createdAt  DateTime @default(now())
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         String   @default("user") // "admin" | "coordinator" | "translator" | "user"
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
 }

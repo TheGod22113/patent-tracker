@@ -86,9 +86,9 @@ export default function DashboardPage() {
   return (
     <AppLayout>
       {/* Page Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Dashboard</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-gray-900 tracking-tight">Dashboard</h1>
           <p className="text-sm text-gray-400 mt-1">{getMonthName(month)} {year} — Genel Bakış</p>
         </div>
         <div className="flex items-center gap-2">
@@ -220,7 +220,7 @@ export default function DashboardPage() {
           )}
 
           {/* Alt Grid */}
-          <div className="grid grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             {/* Durum Dağılımı */}
             <div className="card p-5">
               <h2 className="card-title mb-4">Durum Dağılımı</h2>

@@ -5,6 +5,27 @@ import AppLayout from "@/components/layout/AppLayout";
 import { formatCurrency } from "@/lib/utils";
 import { LANGUAGE_MAP } from "@/lib/constants";
 
+interface AgingDetail {
+  id: string;
+  invoiceNo: string | null;
+  company: string;
+  amount: number;
+  status: string;
+  daysPast: number;
+  issuedAt: string | null;
+  createdAt: string;
+}
+
+interface SlaRow {
+  customerId: string;
+  company: string;
+  slaDeliveryDays: number;
+  totalProjects: number;
+  onTime: number;
+  breached: number;
+  avgDeliveryDays: number;
+}
+
 interface ReportData {
   year: number;
   summary: {
@@ -17,6 +38,12 @@ interface ReportData {
   languagePairStats: { source: string; target: string; count: number; revenue: number }[];
   translatorStats: { name: string; active: number; completed: number; revenue: number }[];
   monthlyProjects: { month: number; count: number; revenue: number }[];
+  aging: {
+    buckets: { current: number; days30: number; days60: number; days90: number; over90: number };
+    details: AgingDetail[];
+    totalUnpaid: number;
+  };
+  slaStats: SlaRow[];
 }
 
 const MONTHS_SHORT = ["Oca","Şub","Mar","Nis","May","Haz","Tem","Ağu","Eyl","Eki","Kas","Ara"];
@@ -155,9 +182,10 @@ export default function ReportsPage() {
 
           {/* Tercüman Performansı */}
           {data.translatorStats.length > 0 && (
-            <div className="card p-5">
+            <div className="card p-5 mb-6">
               <h2 className="card-title mb-4">Tercüman Performansı</h2>
-              <table className="w-full text-sm">
+              <div className="overflow-x-auto">
+              <table className="w-full text-sm min-w-[600px]">
                 <thead>
                   <tr className="text-xs text-gray-400 border-b border-gray-100">
                     <th className="text-left pb-3">Tercüman</th>
@@ -203,8 +231,184 @@ export default function ReportsPage() {
                   })}
                 </tbody>
               </table>
+              </div>
             </div>
           )}
+
+          {/* ═══════════════════════════════════════════════════════════════════ */}
+          {/* FATURA YAŞLANDIRMA RAPORU                                         */}
+          {/* ═══════════════════════════════════════════════════════════════════ */}
+          <div className="card p-5 mb-6">
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h2 className="card-title">Fatura Yaşlandırma Raporu</h2>
+                <p className="text-xs text-gray-400 mt-1">Ödenmemiş faturaların gecikme analizi</p>
+              </div>
+              {data.aging.totalUnpaid > 0 && (
+                <div className="text-right">
+                  <p className="text-xs text-gray-400">Toplam Ödenmemiş</p>
+                  <p className="text-lg font-bold text-red-600">{formatCurrency(data.aging.totalUnpaid)}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Yaşlandırma Barları */}
+            {data.aging.totalUnpaid > 0 ? (
+              <>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+                  {[
+                    { label: "Güncel", value: data.aging.buckets.current, color: "bg-emerald-500", bg: "bg-emerald-50", text: "text-emerald-700" },
+                    { label: "1-30 Gün", value: data.aging.buckets.days30, color: "bg-amber-500", bg: "bg-amber-50", text: "text-amber-700" },
+                    { label: "31-60 Gün", value: data.aging.buckets.days60, color: "bg-orange-500", bg: "bg-orange-50", text: "text-orange-700" },
+                    { label: "61-90 Gün", value: data.aging.buckets.days90, color: "bg-red-400", bg: "bg-red-50", text: "text-red-600" },
+                    { label: "90+ Gün", value: data.aging.buckets.over90, color: "bg-red-600", bg: "bg-red-50", text: "text-red-700" },
+                  ].map((b) => (
+                    <div key={b.label} className={`rounded-xl p-3 ${b.bg} relative overflow-hidden`}>
+                      <div className={`absolute left-0 top-0 bottom-0 w-1 ${b.color}`} />
+                      <p className="text-xs text-gray-500 mb-1">{b.label}</p>
+                      <p className={`text-base font-bold ${b.text}`}>{formatCurrency(b.value)}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Stacked bar */}
+                {data.aging.totalUnpaid > 0 && (
+                  <div className="mb-6">
+                    <div className="flex h-4 rounded-full overflow-hidden">
+                      {[
+                        { value: data.aging.buckets.current, color: "bg-emerald-500" },
+                        { value: data.aging.buckets.days30, color: "bg-amber-500" },
+                        { value: data.aging.buckets.days60, color: "bg-orange-500" },
+                        { value: data.aging.buckets.days90, color: "bg-red-400" },
+                        { value: data.aging.buckets.over90, color: "bg-red-600" },
+                      ].filter((b) => b.value > 0).map((b, i) => (
+                        <div
+                          key={i}
+                          className={`${b.color} transition-all`}
+                          style={{ width: `${(b.value / data.aging.totalUnpaid) * 100}%` }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Detay Tablosu */}
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm min-w-[550px]">
+                    <thead>
+                      <tr className="text-xs text-gray-400 border-b border-gray-100">
+                        <th className="text-left pb-2">Fatura</th>
+                        <th className="text-left pb-2">Müşteri</th>
+                        <th className="text-left pb-2">Durum</th>
+                        <th className="text-right pb-2">Gün</th>
+                        <th className="text-right pb-2">Tutar</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {data.aging.details.map((inv) => {
+                        const urgency = inv.daysPast > 90 ? "text-red-600 font-bold" :
+                                        inv.daysPast > 60 ? "text-red-500 font-semibold" :
+                                        inv.daysPast > 30 ? "text-orange-600 font-semibold" :
+                                        inv.daysPast > 0 ? "text-amber-600" : "text-emerald-600";
+                        return (
+                          <tr key={inv.id} className="hover:bg-gray-50">
+                            <td className="py-2 font-mono text-sm font-medium">{inv.invoiceNo || "-"}</td>
+                            <td className="py-2 text-gray-700">{inv.company}</td>
+                            <td className="py-2">
+                              <span className={`badge ${inv.status === "draft" ? "bg-gray-100 text-gray-600" : "bg-blue-100 text-blue-700"}`}>
+                                {inv.status === "draft" ? "Taslak" : "Gönderildi"}
+                              </span>
+                            </td>
+                            <td className={`py-2 text-right ${urgency}`}>
+                              {inv.daysPast > 0 ? `${inv.daysPast} gün` : "Güncel"}
+                            </td>
+                            <td className="py-2 text-right font-semibold text-gray-900">{formatCurrency(inv.amount)}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-8 text-gray-400">
+                <p className="text-3xl mb-2">🎉</p>
+                <p>Tüm faturalar ödendi! Ödenmemiş fatura yok.</p>
+              </div>
+            )}
+          </div>
+
+          {/* ═══════════════════════════════════════════════════════════════════ */}
+          {/* SLA TAKİBİ                                                        */}
+          {/* ═══════════════════════════════════════════════════════════════════ */}
+          <div className="card p-5 mb-6">
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h2 className="card-title">SLA Takibi</h2>
+                <p className="text-xs text-gray-400 mt-1">Müşteri bazlı teslim süresi taahhüdü analizi</p>
+              </div>
+            </div>
+
+            {data.slaStats.length > 0 ? (
+              <div className="space-y-4">
+                {data.slaStats.map((sla) => {
+                  const compliancePct = sla.totalProjects > 0 ? Math.round((sla.onTime / sla.totalProjects) * 100) : 0;
+                  const barColor = compliancePct >= 90 ? "bg-emerald-500" :
+                                   compliancePct >= 70 ? "bg-amber-500" : "bg-red-500";
+                  const statusColor = compliancePct >= 90 ? "text-emerald-700 bg-emerald-50" :
+                                      compliancePct >= 70 ? "text-amber-700 bg-amber-50" : "text-red-700 bg-red-50";
+                  return (
+                    <div key={sla.customerId} className="bg-gray-50 rounded-xl p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-brand-100 flex items-center justify-center text-sm font-bold text-brand-700">
+                            {sla.company.charAt(0)}
+                          </div>
+                          <div>
+                            <p className="font-semibold text-gray-900">{sla.company}</p>
+                            <p className="text-xs text-gray-500">SLA: {sla.slaDeliveryDays} iş günü</p>
+                          </div>
+                        </div>
+                        <span className={`badge ${statusColor} text-sm font-bold`}>
+                          %{compliancePct}
+                        </span>
+                      </div>
+
+                      {/* Progress bar */}
+                      <div className="w-full bg-gray-200 rounded-full h-2.5 mb-3">
+                        <div className={`h-2.5 rounded-full ${barColor} transition-all`} style={{ width: `${compliancePct}%` }} />
+                      </div>
+
+                      <div className="grid grid-cols-4 gap-3 text-center">
+                        <div>
+                          <p className="text-lg font-bold text-gray-900">{sla.totalProjects}</p>
+                          <p className="text-xs text-gray-400">Toplam</p>
+                        </div>
+                        <div>
+                          <p className="text-lg font-bold text-emerald-600">{sla.onTime}</p>
+                          <p className="text-xs text-gray-400">Zamanında</p>
+                        </div>
+                        <div>
+                          <p className="text-lg font-bold text-red-600">{sla.breached}</p>
+                          <p className="text-xs text-gray-400">Gecikme</p>
+                        </div>
+                        <div>
+                          <p className="text-lg font-bold text-blue-600">{sla.avgDeliveryDays}</p>
+                          <p className="text-xs text-gray-400">Ort. Gün</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-400">
+                <p className="text-3xl mb-2">📋</p>
+                <p>Henüz SLA tanımlı müşteri yok.</p>
+                <p className="text-xs mt-1">Müşteri ayarlarından SLA süresi (iş günü) tanımlayarak başlayın.</p>
+              </div>
+            )}
+          </div>
         </>
       ) : null}
     </AppLayout>

@@ -8,6 +8,7 @@ export async function GET(req: NextRequest) {
     allInvoices,
     allProjects,
     allStaff,
+    unpaidInvoices,
   ] = await Promise.all([
     prisma.invoice.findMany({
       where: { year },
@@ -23,6 +24,12 @@ export async function GET(req: NextRequest) {
       },
     }),
     prisma.staff.findMany({ where: { active: true } }),
+    // Ödenmemiş tüm faturalar (yaşlandırma raporu için)
+    prisma.invoice.findMany({
+      where: { status: { not: "paid" } },
+      include: { customer: true },
+      orderBy: { createdAt: "asc" },
+    }),
   ]);
 
   // ── 1. Müşteri Bazlı Ciro ────────────────────────────────────────────────
@@ -91,6 +98,97 @@ export async function GET(req: NextRequest) {
   const completedProjects = allProjects.filter((p) => ["completed", "invoiced"].includes(p.status)).length;
   const avgProjectValue = totalRevenue > 0 && completedProjects > 0 ? totalRevenue / completedProjects : 0;
 
+  // ── 6. Fatura Yaşlandırma Raporu ─────────────────────────────────────────
+  const now = new Date();
+  const agingBuckets = { current: 0, days30: 0, days60: 0, days90: 0, over90: 0 };
+  const agingDetails: {
+    id: string;
+    invoiceNo: string | null;
+    company: string;
+    amount: number;
+    status: string;
+    daysPast: number;
+    issuedAt: string | null;
+    createdAt: string;
+  }[] = [];
+
+  for (const inv of unpaidInvoices) {
+    const refDate = inv.issuedAt ?? inv.createdAt;
+    const daysPast = Math.floor((now.getTime() - new Date(refDate).getTime()) / (1000 * 60 * 60 * 24));
+    if (daysPast <= 0) agingBuckets.current += inv.totalAmount;
+    else if (daysPast <= 30) agingBuckets.days30 += inv.totalAmount;
+    else if (daysPast <= 60) agingBuckets.days60 += inv.totalAmount;
+    else if (daysPast <= 90) agingBuckets.days90 += inv.totalAmount;
+    else agingBuckets.over90 += inv.totalAmount;
+
+    agingDetails.push({
+      id: inv.id,
+      invoiceNo: inv.invoiceNo,
+      company: inv.customer.company,
+      amount: inv.totalAmount,
+      status: inv.status,
+      daysPast,
+      issuedAt: inv.issuedAt?.toISOString() ?? null,
+      createdAt: inv.createdAt.toISOString(),
+    });
+  }
+
+  // ── 7. SLA Takibi ──────────────────────────────────────────────────────────
+  const slaStats: {
+    customerId: string;
+    company: string;
+    slaDeliveryDays: number;
+    totalProjects: number;
+    onTime: number;
+    breached: number;
+    avgDeliveryDays: number;
+  }[] = [];
+
+  // Müşteriler ve SLA'ları
+  const customersWithSla = await prisma.customer.findMany({
+    where: { slaDeliveryDays: { not: null } },
+    select: { id: true, company: true, slaDeliveryDays: true },
+  });
+
+  for (const cust of customersWithSla) {
+    const custProjects = allProjects.filter(
+      (p) => p.customerId === cust.id && ["completed", "invoiced"].includes(p.status) && p.deliveryDate
+    );
+    if (custProjects.length === 0) continue;
+
+    let onTime = 0;
+    let breached = 0;
+    let totalDays = 0;
+
+    for (const p of custProjects) {
+      // createdAt → deliveryDate arası kaç iş günü?
+      const created = new Date(p.createdAt);
+      const delivered = p.deliveryDate ? new Date(p.deliveryDate) : new Date();
+      const calendarDays = Math.floor((delivered.getTime() - created.getTime()) / (1000 * 60 * 60 * 24));
+      // Basit iş günü hesabı (hafta sonları hariç)
+      let bizDays = 0;
+      const d = new Date(created);
+      while (d <= delivered) {
+        const dow = d.getDay();
+        if (dow !== 0 && dow !== 6) bizDays++;
+        d.setDate(d.getDate() + 1);
+      }
+      totalDays += bizDays;
+      if (bizDays <= (cust.slaDeliveryDays ?? 999)) onTime++;
+      else breached++;
+    }
+
+    slaStats.push({
+      customerId: cust.id,
+      company: cust.company,
+      slaDeliveryDays: cust.slaDeliveryDays!,
+      totalProjects: custProjects.length,
+      onTime,
+      breached,
+      avgDeliveryDays: custProjects.length > 0 ? Math.round(totalDays / custProjects.length) : 0,
+    });
+  }
+
   return NextResponse.json({
     year,
     summary: { totalRevenue, totalProjects, completedProjects, avgProjectValue },
@@ -98,5 +196,11 @@ export async function GET(req: NextRequest) {
     languagePairStats,
     translatorStats,
     monthlyProjects,
+    aging: {
+      buckets: agingBuckets,
+      details: agingDetails.sort((a, b) => b.daysPast - a.daysPast),
+      totalUnpaid: unpaidInvoices.reduce((s, i) => s + i.totalAmount, 0),
+    },
+    slaStats,
   });
 }
