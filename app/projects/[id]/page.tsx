@@ -189,22 +189,24 @@ export default function ProjectDetailPage({
       fetch(`/api/projects/${params.id}`).then((r) => r.json()),
       fetch("/api/staff").then((r) => r.json()),
     ]).then(([p, s]) => {
-      setProject(p);
-      setStaff(s);
+      if (p && !p.error) setProject(p);
+      setStaff(Array.isArray(s) ? s : []);
       setLoading(false);
       if (p && !p.error) {
         fetch(`/api/pricing?year=${p.year}`)
           .then((r) => r.json())
           .then((prices: { sourceLanguage: string; targetLanguage: string; pricePerThousandChars: number; pricePerFigurePage: number }[]) => {
+            if (!Array.isArray(prices)) return;
             const pr = prices.find(
               (x) =>
                 x.sourceLanguage === p.sourceLanguage &&
                 x.targetLanguage === p.targetLanguage
             );
             if (pr) setPricing(pr);
-          });
+          })
+          .catch(() => {});
       }
-    });
+    }).catch(() => setLoading(false));
   };
 
   const loadNotes = () => {
