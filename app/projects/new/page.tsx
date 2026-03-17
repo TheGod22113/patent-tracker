@@ -284,10 +284,24 @@ export default function NewProjectPage() {
 
     // Klasör handle'ını IndexedDB'ye kaydet (proje ID ile ilişkilendir)
     if (dirHandleRef.current && project.id) {
+      const folderName = dirHandleRef.current.name;
       try {
         await saveDirHandle(`project-${project.id}`, dirHandleRef.current);
       } catch {
         // IndexedDB hatası kritik değil
+      }
+      // Klasör adını otomatik not olarak ekle
+      try {
+        await fetch(`/api/projects/${project.id}/notes`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            content: `📁 Klasör: ${folderName}`,
+            createdBy: "sistem",
+          }),
+        });
+      } catch {
+        // Not eklenemezse kritik değil
       }
     }
 
