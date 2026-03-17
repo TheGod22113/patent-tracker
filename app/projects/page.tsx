@@ -8,6 +8,7 @@ import { formatDate, getMonthName } from "@/lib/utils";
 import { MONTHS_TR, LANGUAGE_MAP, LANGUAGES, STATUS_MAP } from "@/lib/constants";
 import Link from "next/link";
 import ContextMenu, { ContextMenuItemType } from "@/components/ui/ContextMenu";
+import { MiniPipeline, PipelineSummary } from "@/components/ui/ProjectPipeline";
 export const dynamic = 'force-dynamic';
 interface Project {
   id: string;
@@ -491,6 +492,18 @@ function ProjectsContent() {
         ))}
       </div>
 
+      {/* Süreç Hattı Özeti */}
+      {!loading && projects.length > 0 && (
+        <PipelineSummary
+          statusCounts={
+            ["new", "word_conversion", "translation", "review", "completed", "invoiced"].map((s) => ({
+              status: s,
+              count: projects.filter((p) => p.status === s).length,
+            }))
+          }
+        />
+      )}
+
       {/* Tablo */}
       <div className="table-wrapper">
         {loading ? (
@@ -525,9 +538,12 @@ function ProjectsContent() {
                   onContextMenu={(e) => { e.preventDefault(); setContextMenu({ x: e.clientX, y: e.clientY, project: p }); }}
                 >
                   <div className="flex items-start justify-between gap-2 mb-1.5">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-mono text-xs font-bold text-gray-900">{p.projectNo}</span>
-                      <StatusBadge status={p.status} />
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-mono text-xs font-bold text-gray-900">{p.projectNo}</span>
+                        <StatusBadge status={p.status} />
+                      </div>
+                      <MiniPipeline status={p.status} />
                     </div>
                     {amount > 0 && (
                       <span className="text-xs font-semibold text-gray-700 flex-shrink-0">
@@ -631,9 +647,12 @@ function ProjectsContent() {
                       <div className="relative" ref={statusDropdown === p.id ? statusDropdownRef : null}>
                         <button
                           onClick={(e) => { e.stopPropagation(); setStatusDropdown(statusDropdown === p.id ? null : p.id); }}
-                          className="cursor-pointer hover:opacity-80 transition-opacity group flex items-center gap-0.5">
-                          <StatusBadge status={p.status} />
-                          <span className="text-gray-300 group-hover:text-gray-500 text-xs">▾</span>
+                          className="cursor-pointer hover:opacity-80 transition-opacity group flex flex-col gap-1">
+                          <div className="flex items-center gap-0.5">
+                            <StatusBadge status={p.status} />
+                            <span className="text-gray-300 group-hover:text-gray-500 text-xs">▾</span>
+                          </div>
+                          <MiniPipeline status={p.status} />
                         </button>
                         {statusDropdown === p.id && (
                           <div className="absolute top-full left-0 mt-1 z-50 bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 min-w-44">

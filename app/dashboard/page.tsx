@@ -6,6 +6,7 @@ import { StatusBadge } from "@/components/ui/Badge";
 import { formatDate, formatCurrency, getMonthName } from "@/lib/utils";
 import { MONTHS_TR, STATUS_MAP } from "@/lib/constants";
 import Link from "next/link";
+import { PipelineSummary } from "@/components/ui/ProjectPipeline";
 
 interface WeekProject {
   id: string;
@@ -143,6 +144,16 @@ export default function DashboardPage() {
             <StatCard label="Bu Ay Fatura" value={formatCurrency(data.monthInvoiceTotal)} color="indigo" small
               icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" /></svg>} />
           </div>
+
+          {/* Proje Süreç Hattı */}
+          {data.totalByStatus.length > 0 && (
+            <PipelineSummary
+              statusCounts={data.totalByStatus.map((s) => ({
+                status: s.status,
+                count: s._count,
+              }))}
+            />
+          )}
 
           {/* KPI Hedef Widget */}
           <KpiWidget
