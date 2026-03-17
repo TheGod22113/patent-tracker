@@ -215,3 +215,11 @@ model ChecklistItem {
   sortOrder Int      @default(0)
   createdAt DateTime @default(now())
 }
+
+model Message {
+  id         String   @id @default(cuid())
+  content    String
+  senderName String
+  channel    String   @default("genel") // "genel" veya "Ad1|Ad2" (DM)
+  createdAt  DateTime @default(now())
+}
