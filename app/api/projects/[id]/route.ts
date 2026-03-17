@@ -5,6 +5,7 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  // Önce fatura bilgisiyle dene, tablo yoksa faturasız fallback
   try {
     const project = await prisma.project.findUnique({
       where: { id: params.id },
@@ -19,9 +20,25 @@ export async function GET(
     });
     if (!project) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json(project);
-  } catch (error) {
-    console.error("Proje getirme hatası:", error);
-    return NextResponse.json({ error: "Proje yüklenemedi" }, { status: 500 });
+  } catch {
+    // invoiceItem/Invoice tablosu henüz oluşturulmamış — faturasız dene
+    try {
+      const project = await prisma.project.findUnique({
+        where: { id: params.id },
+        include: {
+          customer: true,
+          coordinator: true,
+          translator: true,
+          sourceFiles: true,
+          outputs: true,
+        },
+      });
+      if (!project) return NextResponse.json({ error: "Not found" }, { status: 404 });
+      return NextResponse.json({ ...project, invoiceItem: null });
+    } catch (error) {
+      console.error("Proje getirme hatası:", error);
+      return NextResponse.json({ error: "Proje yüklenemedi" }, { status: 500 });
+    }
   }
 }
 
