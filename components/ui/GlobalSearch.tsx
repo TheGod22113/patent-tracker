@@ -106,15 +106,15 @@ export default function GlobalSearch() {
 
   return (
     <>
-      {/* Trigger button — fixed top-right, doesn't affect layout */}
+      {/* Trigger button — üst barda inline, sayfa içeriğiyle çakışmaz */}
       <button
         onClick={() => setOpen(true)}
-        className="fixed top-4 right-5 z-40 flex items-center gap-2 px-3 py-1.5 text-sm text-gray-400 bg-white border border-gray-200 rounded-lg shadow-sm hover:border-brand-500 hover:text-brand-600 hover:shadow-md transition-all focus:outline-none focus:ring-2 focus:ring-brand-600/30"
+        className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-400 bg-gray-50 border border-gray-200 rounded-lg hover:border-brand-500 hover:text-brand-600 hover:bg-white transition-all focus:outline-none focus:ring-2 focus:ring-brand-600/30"
         aria-label="Ara (Ctrl+K)"
       >
         <SearchIcon className="w-4 h-4 flex-shrink-0" />
-        <span className="hidden sm:inline text-left">Ara...</span>
-        <kbd className="hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 text-xs font-mono bg-gray-100 text-gray-400 rounded">
+        <span className="text-left">Ara...</span>
+        <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-xs font-mono bg-gray-200 text-gray-500 rounded">
           Ctrl+K
         </kbd>
       </button>

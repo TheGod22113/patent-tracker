@@ -140,6 +140,13 @@ export default function NewProjectPage() {
     try {
       const dirHandle = await (window as any).showDirectoryPicker({ mode: "read" });
       dirHandleRef.current = dirHandle;
+      // Klasör adını hemen notes alanına yaz
+      setForm((prev) => ({
+        ...prev,
+        notes: prev.notes
+          ? `${prev.notes}\n📁 Klasör: ${dirHandle.name}`
+          : `📁 Klasör: ${dirHandle.name}`,
+      }));
       setScanning(true);
       setScanModal(true);
       setScannedFiles([]);
