@@ -3,12 +3,13 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   // Önce fatura bilgisiyle dene, tablo yoksa faturasız fallback
   try {
     const project = await prisma.project.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         customer: true,
         coordinator: true,
@@ -24,7 +25,7 @@ export async function GET(
     // invoiceItem/Invoice tablosu henüz oluşturulmamış — faturasız dene
     try {
       const project = await prisma.project.findUnique({
-        where: { id: params.id },
+        where: { id },
         include: {
           customer: true,
           coordinator: true,
@@ -44,8 +45,9 @@ export async function GET(
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const body = await req.json();
 
@@ -53,13 +55,13 @@ export async function PUT(
     if (body.status) {
       try {
         const current = await prisma.project.findUnique({
-          where: { id: params.id },
+          where: { id },
           select: { status: true },
         });
         if (current && current.status !== body.status) {
           await prisma.projectStatusHistory.create({
             data: {
-              projectId: params.id,
+              projectId: id,
               oldStatus: current.status,
               newStatus: body.status,
               changedBy: body.changedBy || "sistem",
@@ -72,7 +74,7 @@ export async function PUT(
     }
 
     const project = await prisma.project.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         status: body.status,
         deliveryDate: body.deliveryDate ? new Date(body.deliveryDate) : undefined,
@@ -99,10 +101,11 @@ export async function PUT(
 
 export async function DELETE(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
-    await prisma.project.delete({ where: { id: params.id } });
+    await prisma.project.delete({ where: { id } });
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("Proje silme hatası:", error);

@@ -16,9 +16,10 @@ const MONTHS_TR = [
   "Aralık",
 ];
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const invoice = await prisma.invoice.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       customer: true,
       items: {

@@ -7,13 +7,14 @@ import {
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const body = await req.json();
 
     const project = await prisma.project.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: {
         sourceLanguage: true,
         targetLanguage: true,
@@ -58,7 +59,7 @@ export async function POST(
 
     const output = await prisma.projectOutput.create({
       data: {
-        projectId: params.id,
+        projectId: id,
         outputType: body.outputType,
         fileName: body.fileName || null,
         driveLink: body.driveLink || null,
@@ -79,12 +80,13 @@ export async function POST(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const outputId = req.nextUrl.searchParams.get("outputId");
     if (!outputId) return NextResponse.json({ error: "outputId required" }, { status: 400 });
-    await prisma.projectOutput.delete({ where: { id: outputId, projectId: params.id } });
+    await prisma.projectOutput.delete({ where: { id: outputId, projectId: id } });
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("Tercüme silme hatası:", error);

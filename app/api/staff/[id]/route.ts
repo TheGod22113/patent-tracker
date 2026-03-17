@@ -3,11 +3,12 @@ import { prisma } from "@/lib/prisma";
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const body = await req.json();
   const staff = await prisma.staff.update({
-    where: { id: params.id },
+    where: { id },
     data: {
       name: body.name,
       role: body.role,
@@ -21,10 +22,11 @@ export async function PUT(
 
 export async function DELETE(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   await prisma.staff.update({
-    where: { id: params.id },
+    where: { id },
     data: { active: false },
   });
   return NextResponse.json({ ok: true });

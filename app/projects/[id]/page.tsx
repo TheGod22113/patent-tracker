@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import AppLayout from "@/components/layout/AppLayout";
 import { StatusBadge } from "@/components/ui/Badge";
 import Modal from "@/components/ui/Modal";
@@ -123,8 +123,9 @@ function formatMinutes(min: number): string {
 }
 
 export default function ProjectDetailPage() {
-  const rawParams = useParams();
-  const params = { id: String(rawParams?.id ?? "") };
+  const pathname = usePathname();
+  const projectId = pathname?.split("/").filter(Boolean).pop() ?? "";
+  const params = { id: projectId };
   const router = useRouter();
   const [project, setProject] = useState<Project | null>(null);
   const [staff, setStaff] = useState<Staff[]>([]);

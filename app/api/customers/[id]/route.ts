@@ -3,11 +3,12 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const customer = await prisma.customer.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         _count: { select: { projects: true } },
         pricing: { orderBy: { createdAt: "asc" } },
@@ -18,7 +19,7 @@ export async function GET(
   } catch {
     // CustomerPricing table may not exist yet
     const customer = await prisma.customer.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: { _count: { select: { projects: true } } },
     });
     if (!customer) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -28,11 +29,12 @@ export async function GET(
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const body = await req.json();
   const customer = await prisma.customer.update({
-    where: { id: params.id },
+    where: { id },
     data: {
       name: body.name,
       company: body.company,
@@ -47,8 +49,9 @@ export async function PUT(
 
 export async function DELETE(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  await prisma.customer.delete({ where: { id: params.id } });
+  const { id } = await params;
+  await prisma.customer.delete({ where: { id } });
   return NextResponse.json({ ok: true });
 }

@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-type Params = { params: { id: string } };
+type Params = { params: Promise<{ id: string }> };
 
 export async function GET(_req: NextRequest, { params }: Params) {
+  const { id } = await params;
   try {
     const items = await prisma.checklistItem.findMany({
-      where: { projectId: params.id },
+      where: { projectId: id },
       orderBy: { sortOrder: "asc" },
     });
     return NextResponse.json(items);
@@ -16,12 +17,13 @@ export async function GET(_req: NextRequest, { params }: Params) {
 }
 
 export async function POST(req: NextRequest, { params }: Params) {
+  const { id } = await params;
   try {
     const body = await req.json();
     const { text, sortOrder } = body as { text: string; sortOrder?: number };
     if (!text) return NextResponse.json({ error: "text is required" }, { status: 400 });
     const item = await prisma.checklistItem.create({
-      data: { projectId: params.id, text, sortOrder: sortOrder ?? 0 },
+      data: { projectId: id, text, sortOrder: sortOrder ?? 0 },
     });
     return NextResponse.json(item, { status: 201 });
   } catch (error) {
