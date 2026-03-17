@@ -94,15 +94,20 @@ export default function SettingsPage() {
   const loadStaff = () =>
     fetch("/api/staff")
       .then((r) => r.json())
-      .then(setStaff);
+      .then((d) => setStaff(Array.isArray(d) ? d : []))
+      .catch(() => setStaff([]));
 
   const loadPricing = () =>
     fetch(`/api/pricing?year=${pricingYear}`)
       .then((r) => r.json())
-      .then(setPricing);
+      .then((d) => setPricing(Array.isArray(d) ? d : []))
+      .catch(() => setPricing([]));
 
   const loadTemplates = () =>
-    fetch("/api/templates").then((r) => r.json()).then(setTemplates);
+    fetch("/api/templates")
+      .then((r) => r.json())
+      .then((d) => setTemplates(Array.isArray(d) ? d : []))
+      .catch(() => setTemplates([]));
 
   const loadTags = () =>
     fetch("/api/tags").then((r) => r.json()).then((d) => setTags(Array.isArray(d) ? d : [])).catch(() => setTags([]));

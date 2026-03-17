@@ -62,14 +62,16 @@ export default function CustomersPage() {
     fetch(`/api/customers?search=${encodeURIComponent(q)}`)
       .then((r) => r.json())
       .then((d) => {
-        setCustomers(d);
+        const list = Array.isArray(d) ? d : [];
+        setCustomers(list);
         setLoading(false);
         // Refresh pricing customer if open
         if (pricingCustomer) {
-          const updated = d.find((c: Customer) => c.id === pricingCustomer.id);
+          const updated = list.find((c: Customer) => c.id === pricingCustomer.id);
           if (updated) setPricingCustomer(updated);
         }
-      });
+      })
+      .catch(() => setLoading(false));
   };
 
   useEffect(() => {

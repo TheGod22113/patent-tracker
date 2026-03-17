@@ -30,61 +30,71 @@ export async function GET(req: NextRequest) {
     ];
   }
 
-  const projects = await prisma.project.findMany({
-    where,
-    orderBy: { createdAt: "desc" },
-    include: {
-      customer: true,
-      coordinator: true,
-      translator: true,
-      outputs: true,
-      tags: { include: { tag: true } },
-    },
-  });
-  return NextResponse.json(projects);
+  try {
+    const projects = await prisma.project.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      include: {
+        customer: true,
+        coordinator: true,
+        translator: true,
+        outputs: true,
+        tags: { include: { tag: true } },
+      },
+    });
+    return NextResponse.json(projects);
+  } catch (error) {
+    console.error("Proje listeleme hatası:", error);
+    return NextResponse.json([], { status: 200 });
+  }
 }
 
 export async function POST(req: NextRequest) {
-  const body = await req.json();
+  try {
+    const body = await req.json();
 
-  // Proje numarası oluştur
-  const count = await prisma.project.count({
-    where: { year: body.year, month: body.month },
-  });
-  const projectNo = generateProjectNo(body.year, body.month, count + 1);
+    // Proje numarası oluştur
+    const count = await prisma.project.count({
+      where: { year: body.year, month: body.month },
+    });
+    const projectNo = generateProjectNo(body.year, body.month, count + 1);
 
-  const project = await prisma.project.create({
-    data: {
-      projectNo,
-      year: body.year,
-      month: body.month,
-      customerId: body.customerId,
-      sourceLanguage: body.sourceLanguage,
-      targetLanguage: body.targetLanguage,
-      deliveryDate: body.deliveryDate ? new Date(body.deliveryDate) : null,
-      coordinatorId: body.coordinatorId || null,
-      translatorId: body.translatorId || null,
-      notes: body.notes || null,
-      sourceFiles: body.sourceFiles?.length
-        ? {
-            create: body.sourceFiles.map(
-              (f: { fileName: string; driveLink: string; fileType: string; filePath?: string }) => ({
-                fileName: f.fileName,
-                driveLink: f.driveLink || null,
-                filePath: f.filePath || null,
-                fileType: f.fileType || "pdf",
-              })
-            ),
-          }
-        : undefined,
-    },
-    include: {
-      customer: true,
-      coordinator: true,
-      translator: true,
-      sourceFiles: true,
-    },
-  });
+    const project = await prisma.project.create({
+      data: {
+        projectNo,
+        year: body.year,
+        month: body.month,
+        customerId: body.customerId,
+        sourceLanguage: body.sourceLanguage,
+        targetLanguage: body.targetLanguage,
+        deliveryDate: body.deliveryDate ? new Date(body.deliveryDate) : null,
+        coordinatorId: body.coordinatorId || null,
+        translatorId: body.translatorId || null,
+        notes: body.notes || null,
+        sourceFiles: body.sourceFiles?.length
+          ? {
+              create: body.sourceFiles.map(
+                (f: { fileName: string; driveLink: string; fileType: string; filePath?: string }) => ({
+                  fileName: f.fileName,
+                  driveLink: f.driveLink || null,
+                  filePath: f.filePath || null,
+                  fileType: f.fileType || "pdf",
+                })
+              ),
+            }
+          : undefined,
+      },
+      include: {
+        customer: true,
+        coordinator: true,
+        translator: true,
+        sourceFiles: true,
+      },
+    });
 
-  return NextResponse.json(project, { status: 201 });
+    return NextResponse.json(project, { status: 201 });
+  } catch (error) {
+    console.error("Proje ekleme hatası:", error);
+    return NextResponse.json({ error: "Proje eklenemedi" }, { status: 500 });
+  }
 }
